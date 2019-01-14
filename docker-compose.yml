@@ -1,0 +1,161 @@
+# This is for running Talkyard with Docker-Compose behind your own
+# reverse proxy, like Traefik. This file tags Talkyard's HTTP server with
+# Trafik labels, in case you use Traefik.  You can use traefik-compose.yml to
+# start Traefik, if you don't have a reverse proxy already.
+#
+# If you're unsure if this is the right way for you to do things, then,
+# instead install Talkyard using  https://github.com/debiki/talkyard-prod-one,
+# that should be simpler, and does automatic backups and upgrades.
+#
+# Dockerfiles for the Talkyard images are in another Git repo:
+# https://github.com/debiki/talkyard, at: images/<image-name>/Dockerfile
+#
+# There's an image build script: https://github.com/debiki/talkyard/blob/master/Makefile,
+# use like so: `make prod-images` and `make tag-and-push-latest-images`.
+
+
+# stack:  docker-compose config --resolve-image-digests to pin images. tada
+# (https://github.com/moby/moby/issues/30127#issuecomment-290456897)
+
+# $ docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > docker-stack.yml
+# $ docker stack deploy --compose-file docker-stack.yml vossibility
+
+# ! Backup, restore, or migrate data volumes
+
+# https://docs.docker.com/engine/reference/builder/#healthcheck
+
+
+version: '3.7'
+
+networks:
+  proxy_net:
+    external: true
+  # This netw name get prefixed with 'talkyard_' by Docker, see .env [7RJPW2].
+  internal_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${INTERNAL_NET_SUBNTET}
+
+# For Swarm.
+configs:
+  play_framework_config:
+    file: ./conf/play-framework.conf
+
+volumes:
+  talkyard-nginx-logs:
+  talkyard-uploads:
+  talkyard-app-logs:
+  talkyard-uploads:
+  talkyard-backups:
+  talkyard-cache-data:
+  talkyard-cache-logs:
+  talkyard-pg10-data:
+  talkyard-pg10-logs:
+  talkyard-search-data:
+  talkyard-search-logs:
+
+services:
+  web:
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-web:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    # dockerfile: https://github.com/debiki/talkyard/blob/master/images/web/Dockerfile
+    restart: always
+    volumes:
+      - talkyard-nginx-logs:/var/log/nginx/
+      - talkyard-uploads:/opt/talkyard/uploads/:ro
+    networks:
+      # Interpolation here doesn't work:?  ${PROXY_NET_NAME}:
+      # instead:
+      proxy_net:
+      internal_net:
+        ipv4_address: ${INTERNAL_NET_WEB_IP}
+    depends_on:
+      - app
+    # for Compose (Swarm: missing)
+    labels:
+      - "traefik.docker.network=${PROXY_NET_NAME}"
+      - "traefik.enable=true"
+      - "traefik.web.frontend.rule=Host:${TALKYARD_HOSTNAME}"
+      - "traefik.web.port=80"
+      - "traefik.web.protocol=http"
+    environment:
+      - CDN_PULL_KEY
+
+  app:
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-app:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    # dockerfile: https://github.com/debiki/talkyard/blob/master/images/app/Dockerfile.prod
+    restart: always
+    stdin_open: true  # otherwise Play exits
+    volumes:
+      - talkyard-app-logs:/var/log/talkyard/
+      - talkyard-uploads:/opt/talkyard/uploads/
+      - talkyard-backups:/opt/talkyard-backups/:ro
+      # For Compose
+      - ./conf/play-framework.conf:/opt/talkyard/app/conf/app-prod-override.conf:ro  # see [4WDKPU2] in debiki/talkyard
+    # For Swarm
+    configs:
+      - source: play_framework_config
+        target: /opt/talkyard/app/conf/app-prod-override.conf:ro
+        mode: 0400   # root user read-only
+    networks:
+      internal_net:
+        ipv4_address: ${INTERNAL_NET_APP_IP}
+    depends_on:
+      - cache
+      - rdb
+      - search
+    environment:
+      - PLAY_SECRET_KEY
+      - TALKYARD_SECURE
+      - POSTGRES_PASSWORD
+      - TALKYARD_HOSTNAME
+      - BECOME_OWNER_EMAIL_ADDRESS
+
+  cache:
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-cache:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    # dockerfile: https://github.com/debiki/talkyard/blob/master/images/cache/Dockerfile
+    restart: always
+    volumes:
+      - talkyard-cache-data:/data/
+      - talkyard-cache-logs:/var/log/redis/
+    networks:
+      internal_net:
+        ipv4_address: ${INTERNAL_NET_CACHE_IP}
+    sysctls:
+      net.core.somaxconn: 511
+
+  rdb:
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-rdb:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    # dockerfile: https://github.com/debiki/talkyard/blob/master/images/rdb/Dockerfile
+    restart: always
+    volumes:
+      - talkyard-pg10-data:/var/lib/postgresql/data/
+      - talkyard-pg10-logs:/var/log/postgresql/
+    networks:
+      internal_net:
+        ipv4_address: ${INTERNAL_NET_RDB_IP}
+    environment:
+      - POSTGRES_PASSWORD
+
+  search:
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-search:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    # dockerfile: https://github.com/debiki/talkyard/blob/master/images/search/Dockerfile
+    restart: always
+    volumes:
+      - talkyard-search-data:/usr/share/elasticsearch/data/
+      - talkyard-search-logs:/usr/share/elasticsearch/logs/
+    networks:
+      internal_net:
+        ipv4_address: ${INTERNAL_NET_SEARCH_IP}
+    environment:
+      bootstrap.memory_lock: 'true'
+      ES_JAVA_OPTS: '-Xms512m -Xmx512m'
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+# vim: et ts=2 sw=2
