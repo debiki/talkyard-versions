@@ -75,6 +75,7 @@ services:
     # for Compose (Swarm: missing)
     labels:
       - "traefik.docker.network=${PROXY_NET_NAME}"
+      - "traefik.frontend.passHostHeader=true"
       - "traefik.enable=true"
       - "traefik.web.frontend.rule=Host:${TALKYARD_HOSTNAME}"
       - "traefik.web.port=80"
