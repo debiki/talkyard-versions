@@ -1,11 +1,11 @@
 # This is for running Talkyard with Docker-Compose behind your own
 # reverse proxy, like Traefik. This file tags Talkyard's HTTP server with
-# Trafik labels, in case you use Traefik.  You can use traefik-compose.yml to
-# start Traefik, if you don't have a reverse proxy already.
+# Trafik frontend and backend labels, in case you use Traefik.
 #
-# If you're unsure if this is the right way for you to do things, then,
-# instead install Talkyard using  https://github.com/debiki/talkyard-prod-one,
-# that should be simpler, and does automatic backups and upgrades.
+# If you're unsure if this is the right way for you to do things, then, probably
+# better for you to install Talkyard on its own server, see:
+# https://github.com/debiki/talkyard-prod-one — this also gives you automatic
+# backups and upgrades.
 #
 # Dockerfiles for the Talkyard images are in another Git repo:
 # https://github.com/debiki/talkyard, at: images/<image-name>/Dockerfile
@@ -14,15 +14,17 @@
 # use like so: `make prod-images` and `make tag-and-push-latest-images`.
 
 
-# stack:  docker-compose config --resolve-image-digests to pin images. tada
+# Later do?: ---------------
+# stack:  docker-compose config --resolve-image-digests  to pin images
 # (https://github.com/moby/moby/issues/30127#issuecomment-290456897)
 
 # $ docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > docker-stack.yml
-# $ docker stack deploy --compose-file docker-stack.yml vossibility
+# $ docker stack deploy --compose-file docker-stack.yml talkyard
 
 # ! Backup, restore, or migrate data volumes
 
 # https://docs.docker.com/engine/reference/builder/#healthcheck
+# --------------------------
 
 
 version: '3.7'
@@ -30,7 +32,7 @@ version: '3.7'
 networks:
   proxy_net:
     external: true
-  # This netw name get prefixed with 'talkyard_' by Docker, see .env [7RJPW2].
+  # This netw name get prefixed with COMPOSE_PROJECT_NAME  = 'talkyard_' by Docker, from .env.
   internal_net:
     driver: bridge
     ipam:
@@ -43,11 +45,10 @@ configs:
     file: ./conf/play-framework.conf
 
 volumes:
-  talkyard-nginx-logs:
-  talkyard-uploads:
-  talkyard-app-logs:
-  talkyard-uploads:
   talkyard-backups:
+  talkyard-uploads:
+  talkyard-nginx-logs:
+  talkyard-app-logs:
   talkyard-cache-data:
   talkyard-cache-logs:
   talkyard-pg10-data:
@@ -57,7 +58,7 @@ volumes:
 
 services:
   web:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-web:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-web:${TALKYARD_VERSION_TAG:-v0.6.18-WIP-1-443e447}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/web/Dockerfile
     restart: always
     volumes:
@@ -82,7 +83,7 @@ services:
       - CDN_PULL_KEY
 
   app:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-app:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-app:${TALKYARD_VERSION_TAG:-v0.6.18-WIP-1-443e447}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/app/Dockerfile.prod
     restart: always
     stdin_open: true  # otherwise Play exits
@@ -112,7 +113,7 @@ services:
       - BECOME_OWNER_EMAIL_ADDRESS
 
   cache:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-cache:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-cache:${TALKYARD_VERSION_TAG:-v0.6.18-WIP-1-443e447}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/cache/Dockerfile
     restart: always
     volumes:
@@ -125,7 +126,7 @@ services:
       net.core.somaxconn: 511
 
   rdb:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-rdb:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-rdb:${TALKYARD_VERSION_TAG:-v0.6.18-WIP-1-443e447}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/rdb/Dockerfile
     restart: always
     volumes:
@@ -138,7 +139,7 @@ services:
       - POSTGRES_PASSWORD
 
   search:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-search:${TALKYARD_VERSION_TAG:-v0.6.17-WIP-1-2950cc1}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-search:${TALKYARD_VERSION_TAG:-v0.6.18-WIP-1-443e447}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/search/Dockerfile
     restart: always
     volumes:

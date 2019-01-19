@@ -15,11 +15,11 @@
 
 
 # Later do?: ---------------
-# stack:  docker-compose config --resolve-image-digests to pin images. tada
+# stack:  docker-compose config --resolve-image-digests  to pin images
 # (https://github.com/moby/moby/issues/30127#issuecomment-290456897)
 
 # $ docker-compose -f docker-compose.yml -f docker-compose.prod.yml config > docker-stack.yml
-# $ docker stack deploy --compose-file docker-stack.yml vossibility
+# $ docker stack deploy --compose-file docker-stack.yml talkyard
 
 # ! Backup, restore, or migrate data volumes
 
@@ -32,7 +32,7 @@ version: '3.7'
 networks:
   proxy_net:
     external: true
-  # This netw name get prefixed with 'talkyard_' by Docker, see .env [7RJPW2].
+  # This netw name get prefixed with COMPOSE_PROJECT_NAME  = 'talkyard_' by Docker, from .env.
   internal_net:
     driver: bridge
     ipam:
@@ -45,11 +45,10 @@ configs:
     file: ./conf/play-framework.conf
 
 volumes:
-  talkyard-nginx-logs:
-  talkyard-uploads:
-  talkyard-app-logs:
-  talkyard-uploads:
   talkyard-backups:
+  talkyard-uploads:
+  talkyard-nginx-logs:
+  talkyard-app-logs:
   talkyard-cache-data:
   talkyard-cache-logs:
   talkyard-pg10-data:
