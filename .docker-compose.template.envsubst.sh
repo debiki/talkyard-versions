@@ -5,7 +5,7 @@
 # This is a simple way to update the default Talkyard version, for all images,
 # once a new Talkyard version has been released.
 
-VERSION=$(grep -iv WIP version-tags.log | tail -n1)
+VERSION=$(tail -n1 version-tags.log)
 
 echo
 echo "Bumping Talkyard version in docker-compose.yml to $VERSION ..."
