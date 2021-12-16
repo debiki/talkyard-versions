@@ -58,7 +58,7 @@ volumes:
 
 services:
   web:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-web:${TALKYARD_VERSION_TAG:-v0.2021.38-011a458c3}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-web:${TALKYARD_VERSION_TAG:-v0.2021.39-831d61484}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/web/Dockerfile
     restart: always
     volumes:
@@ -84,7 +84,7 @@ services:
       - CDN_PULL_KEY
 
   app:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-app:${TALKYARD_VERSION_TAG:-v0.2021.38-011a458c3}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-app:${TALKYARD_VERSION_TAG:-v0.2021.39-831d61484}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/app/Dockerfile.prod
     restart: always
     stdin_open: true  # otherwise Play exits
@@ -114,7 +114,7 @@ services:
       - BECOME_OWNER_EMAIL_ADDRESS
 
   cache:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-cache:${TALKYARD_VERSION_TAG:-v0.2021.38-011a458c3}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-cache:${TALKYARD_VERSION_TAG:-v0.2021.39-831d61484}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/cache/Dockerfile
     restart: always
     volumes:
@@ -127,7 +127,7 @@ services:
       net.core.somaxconn: 511
 
   rdb:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-rdb:${TALKYARD_VERSION_TAG:-v0.2021.38-011a458c3}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-rdb:${TALKYARD_VERSION_TAG:-v0.2021.39-831d61484}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/rdb/Dockerfile
     restart: always
     volumes:
@@ -140,7 +140,7 @@ services:
       - POSTGRES_PASSWORD
 
   search:
-    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-search:${TALKYARD_VERSION_TAG:-v0.2021.38-011a458c3}
+    image: ${DOCKER_REPOSITORY:-debiki}/talkyard-search:${TALKYARD_VERSION_TAG:-v0.2021.39-831d61484}
     # dockerfile: https://github.com/debiki/talkyard/blob/master/images/search/Dockerfile
     restart: always
     volumes:
